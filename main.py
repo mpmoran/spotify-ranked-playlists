@@ -1,7 +1,6 @@
-# %%
 # standard libraries
 import os
-from typing import Any, Dict, List, Union
+from typing import List, Union
 
 # third-party libraries
 from dotenv import load_dotenv
@@ -10,10 +9,12 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
 
-# %%
 # functions
+# ----------------------------------------------------------------------------
 def chunk(iterable, n):
-    """Yield successive n-sized chunks from iterable."""
+    """
+    Yield successive n-sized chunks from iterable.
+    """
     for i in range(0, len(iterable), n):
         yield iterable[i:i + n]
 
@@ -21,7 +22,7 @@ def chunk(iterable, n):
 def get_ranked_tracks(df: pd.DataFrame,
                       metric: str,
                       num: int,
-                      ascending: bool = False):
+                      ascending: bool = False) -> List[dict]:
     """
     Return num tracks ranked by metric.
     """
@@ -44,7 +45,9 @@ def spotify_create_and_fill_playlist(client: spotipy.client.Spotify,
     that was created or None.
     """
     # get all playlist names
-    playlists: List[dict] = spotify_get_results(client, 'user_playlists', user=user_id)
+    playlists: List[dict] = spotify_get_results(client,
+                                                'user_playlists',
+                                                user=user_id)
     playlist_names = [pl['name'] for pl in playlists]
 
     if name in playlist_names:
@@ -58,9 +61,9 @@ def spotify_create_and_fill_playlist(client: spotipy.client.Spotify,
             description=description
         )
         playlist_id: str = create_response['id']
-        add_response = sp.playlist_add_items(playlist_id=playlist_id,
-                                             items=track_uris,
-                                             position=None)
+        sp.playlist_add_items(playlist_id=playlist_id,
+                              items=track_uris,
+                              position=None)
 
         details = {}
         details['id'] = create_response['id']
@@ -98,49 +101,49 @@ def spotify_get_results(client: spotipy.client.Spotify,
     num_actual: int = len(results)
     if num_expected != num_actual:
         raise Exception(f'Total tracks according to Spotify ({num_expected}) '
-                        f'does not equal total tracks extracted from API calls '
-                        f'({num_actual}).')
+                        f'does not equal total tracks extracted from API '
+                        f'calls ({num_actual}).')
 
     return results
-# =========
+# ----------------------------------------------------------------------------
 
 
-# beginning of main()
 # load env vars from .env file
 load_dotenv()
-# ============================
 
 # get authentication details for Spotify
+# ----------------------------------------------------------------------------
 sp_client_id: str = os.getenv('SPOTIFY_CLIENT_ID')
 sp_client_secret: str = os.getenv('SPOTIFY_CLIENT_SECRET')
 sp_redirect_uri: str = os.getenv('SPOTIFY_REDIRECT_URI')
 sp_scope = 'user-library-read playlist-modify-private playlist-read-private'
-# ===========
+# ----------------------------------------------------------------------------
 
 # create spotify client
+# ----------------------------------------------------------------------------
 sp = spotipy.Spotify(
     auth_manager=SpotifyOAuth(client_id=sp_client_id,
                               client_secret=sp_client_secret,
                               redirect_uri=sp_redirect_uri,
                               scope=sp_scope)
 )
-# =====================
+# ----------------------------------------------------------------------------
 
 # get details about current user
+# ----------------------------------------------------------------------------
 user_details: dict = sp.current_user()
 user_id: str = user_details['id']
 user_uri: str = user_details['uri']
-# ==============================
 
-# %%
 # get all saved tracks by user
+# ----------------------------------------------------------------------------
 saved_tracks: List[dict] = spotify_get_results(sp,
                                                'current_user_saved_tracks')
 num_saved_tracks: int = len(saved_tracks)
-# ============================
+# ----------------------------------------------------------------------------
 
-# %%
 # get audio features of all tracks
+# ----------------------------------------------------------------------------
 # audio_features is in the same order as saved_tracks
 audio_features: List[dict] = []
 for piece in chunk(saved_tracks, 100):  # piece is List[dict]
@@ -152,10 +155,10 @@ if num_saved_tracks != num_audio_features:
     raise Exception(f'Total tracks according to Spotify ({num_saved_tracks}) '
                     f'does not equal total tracks extracted from API calls '
                     f'({num_audio_features}).')
-# ================================
+# ----------------------------------------------------------------------------
 
-# %%
-# Create list of dict for records
+# merge information about songs
+# ----------------------------------------------------------------------------
 saved_tracks_stage1: List[dict] = []
 for track in saved_tracks:
     info = track['track']
@@ -189,10 +192,10 @@ for str, afr in zip(saved_tracks_stage1, audio_features_stage1):
     rec.update(str)
     rec.update(afr)
     tracks_stage1.append(rec)
-# =======================
+# ----------------------------------------------------------------------------
 
-# %%
 # create pandas dataframe
+# ----------------------------------------------------------------------------
 df = pd.DataFrame(tracks_stage1)
 df.to_csv('./saved_tracks.csv',
           sep='\t',
@@ -200,10 +203,10 @@ df.to_csv('./saved_tracks.csv',
           index=True,
           mode='w',
           encoding='utf-8')
-# =======================
+# ----------------------------------------------------------------------------
 
-# %%
 # create config storage for creating playlists
+# ----------------------------------------------------------------------------
 playlist_config = [
     {
         'name': 'most danceable',
@@ -218,25 +221,25 @@ playlist_config = [
         'description': '50 highest tempo songs from my liked songs.'
     },
 ]
-# ============================================
+# ----------------------------------------------------------------------------
 
-# %%
 # create playlists from config
+# ----------------------------------------------------------------------------
 for pl in playlist_config:
     name = pl['name']
     metric = pl['metric']
     num_tracks = pl['num_tracks']
     description = pl['description']
 
-    playlist_tracks = get_ranked_tracks(df,
-                                        metric=metric,
-                                        num=num_tracks)
-    playlist_details: Union[List[dict], None] = spotify_create_and_fill_playlist(
-        sp,
-        name=name,
-        track_uris=playlist_tracks,
-        description=description,
-        user_id=user_id
-    )
-# ============================
-# =============================
+    playlist_tracks: List[dict] = get_ranked_tracks(df,
+                                                    metric=metric,
+                                                    num=num_tracks)
+    playlist_details: Union[List[dict], None] = \
+        spotify_create_and_fill_playlist(
+            sp,
+            name=name,
+            track_uris=playlist_tracks,
+            description=description,
+            user_id=user_id
+        )
+# ----------------------------------------------------------------------------
