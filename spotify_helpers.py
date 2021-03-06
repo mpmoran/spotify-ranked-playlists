@@ -1,9 +1,13 @@
 # standard libraries
+import logging
 from typing import List, Union
 
 # third-party libraries
 import pandas as pd
 import spotipy
+
+
+logger = logging.getLogger(__name__)
 
 
 def chunk(iterable, n):
@@ -21,10 +25,12 @@ def get_ranked_tracks(df: pd.DataFrame,
     """
     Return num tracks ranked by metric.
     """
+    logger.info(f'Ranking tracks by {metric}.')
     df_ranked = df.sort_values(by=metric,
                                ascending=ascending,
                                ignore_index=True)
     tracks: List[str] = df_ranked['uri'].iloc[:num].tolist()
+    logger.info('Finished ranking tracks.')
 
     return tracks
 
@@ -39,6 +45,8 @@ def spotify_create_and_fill_playlist(client: spotipy.client.Spotify,
     exists, this function does nothing. Returns information about playlist
     that was created or None.
     """
+    logger.info(f'Creating and filling playlist {name}.')
+
     # get all playlist names
     playlists: List[dict] = spotify_get_results(client,
                                                 'user_playlists',
@@ -46,6 +54,7 @@ def spotify_create_and_fill_playlist(client: spotipy.client.Spotify,
     playlist_names = [pl['name'] for pl in playlists]
 
     if name in playlist_names:
+        logger.info('Playlist already exists. Doing nothing.')
         return None
     else:
         create_response = client.user_playlist_create(
@@ -64,6 +73,8 @@ def spotify_create_and_fill_playlist(client: spotipy.client.Spotify,
         details['id'] = create_response['id']
         details['uri'] = create_response['uri']
 
+        logger.info('Created and filled playlist.')
+
         return details
 
 
@@ -75,6 +86,8 @@ def spotify_get_results(client: spotipy.client.Spotify,
     """
     Return results of calling operation on Spotify client
     """
+    logger.info(f'Calling and collecting results for {operation} operation.')
+
     # get client operation method
     method = getattr(client, operation)
 
@@ -98,5 +111,7 @@ def spotify_get_results(client: spotipy.client.Spotify,
         raise Exception(f'Total tracks according to Spotify ({num_expected}) '
                         f'does not equal total tracks extracted from API '
                         f'calls ({num_actual}).')
+
+    logger.info('Finished calling and collecting results.')
 
     return results
