@@ -9,7 +9,7 @@ from typing import List, Union
 from dotenv import load_dotenv
 import pandas as pd
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 import yaml
 
 # local libraries
@@ -39,6 +39,7 @@ logger.info('Loading configurations.')
 config = configparser.ConfigParser()
 config.read('app.conf')
 playlists_conf_path: str = config['DEFAULT']['playlist_conf_path']
+user_auth_flow: str = config['DEFAULT']['user_auth_flow']
 spotify_permissions_scope: str = config['DEFAULT']['spotify_permissions_scope']
 
 # load env vars from .env file
@@ -55,19 +56,24 @@ playlist_config = yaml.safe_load(playlist_config_text)
 logger.info('Pulling secrets.')
 sp_client_id: str = os.getenv('SPOTIFY_CLIENT_ID')
 sp_client_secret: str = os.getenv('SPOTIFY_CLIENT_SECRET')
-sp_redirect_uri: str = os.getenv('SPOTIFY_REDIRECT_URI')
+if user_auth_flow == 'authorization':
+    sp_redirect_uri: str = os.getenv('SPOTIFY_REDIRECT_URI')
 sp_scope: str = spotify_permissions_scope
 # ----------------------------------------------------------------------------
 
 # create spotify client
 # ----------------------------------------------------------------------------
 logger.info('Authenticating with Spotify API.')
-sp = spotipy.Spotify(
-    auth_manager=SpotifyOAuth(client_id=sp_client_id,
-                              client_secret=sp_client_secret,
-                              redirect_uri=sp_redirect_uri,
-                              scope=sp_scope)
-)
+if user_auth_flow == 'authorization':
+    auth_manager = SpotifyOAuth(client_id=sp_client_id,
+                                client_secret=sp_client_secret,
+                                redirect_uri=sp_redirect_uri,
+                                scope=sp_scope)
+else:
+    auth_manager = SpotifyClientCredentials(client_id=sp_client_id,
+                                            client_secret=sp_client_secret)
+
+sp = spotipy.Spotify(auth_manager=auth_manager)
 # ----------------------------------------------------------------------------
 
 # get details about current user
