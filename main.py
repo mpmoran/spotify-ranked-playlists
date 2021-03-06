@@ -53,7 +53,7 @@ def spotify_create_and_fill_playlist(client: spotipy.client.Spotify,
     if name in playlist_names:
         return None
     else:
-        create_response = sp.user_playlist_create(
+        create_response = client.user_playlist_create(
             user=user_id,
             name=name,
             public=False,
@@ -61,9 +61,9 @@ def spotify_create_and_fill_playlist(client: spotipy.client.Spotify,
             description=description
         )
         playlist_id: str = create_response['id']
-        sp.playlist_add_items(playlist_id=playlist_id,
-                              items=track_uris,
-                              position=None)
+        client.playlist_add_items(playlist_id=playlist_id,
+                                  items=track_uris,
+                                  position=None)
 
         details = {}
         details['id'] = create_response['id']
@@ -81,7 +81,7 @@ def spotify_get_results(client: spotipy.client.Spotify,
     Return results of calling operation on Spotify client
     """
     # get client operation method
-    method = getattr(sp, operation)
+    method = getattr(client, operation)
 
     # keep making API calls and collecting results
     results: List[dict] = []
@@ -205,7 +205,7 @@ df.to_csv('./saved_tracks.csv',
           encoding='utf-8')
 # ----------------------------------------------------------------------------
 
-# create config storage for creating playlists
+# config storage for creating playlists
 # ----------------------------------------------------------------------------
 playlist_config = [
     {
@@ -220,6 +220,19 @@ playlist_config = [
         'num_tracks': 50,
         'description': '50 highest tempo songs from my liked songs.'
     },
+    {
+        'name': 'highest energy',
+        'metric': 'energy',
+        'num_tracks': 50,
+        'description': '50 highest energy songs from my liked songs.'
+    },
+    {
+        'name': 'most live',
+        'metric': 'liveness',
+        'num_tracks': 50,
+        'description': '50 most live songs from my liked songs.'
+    }
+
 ]
 # ----------------------------------------------------------------------------
 
