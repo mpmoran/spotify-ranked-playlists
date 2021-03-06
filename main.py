@@ -182,13 +182,19 @@ for pl in playlist_config:
                                                        metric=metric,
                                                        num=num_tracks)
     playlist_details: Union[List[dict], None] = \
-        sh.spotify_create_and_fill_playlist(
-            sp,
-            name=name,
-            track_uris=playlist_tracks,
-            description=description,
-            user_id=user_id
-        )
+        sh.spotify_create_playlist(sp,
+                                   name=name,
+                                   description=description,
+                                   user_id=user_id)
+    playlist_id: str = playlist_details['id']
+
+    sh.spotify_fill_playlist(
+        sp,
+        playlist_id=playlist_id,
+        track_uris=playlist_tracks,
+        user_id=user_id,
+        overwrite=True
+    )
 # ----------------------------------------------------------------------------
 
 logger.info('Done.')

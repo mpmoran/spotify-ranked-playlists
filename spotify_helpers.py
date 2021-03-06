@@ -1,6 +1,6 @@
 # standard libraries
 import logging
-from typing import List, Union
+from typing import List
 
 # third-party libraries
 import pandas as pd
@@ -35,47 +35,94 @@ def get_ranked_tracks(df: pd.DataFrame,
     return tracks
 
 
-def spotify_create_and_fill_playlist(client: spotipy.client.Spotify,
-                                     name: str,
-                                     track_uris: List[dict],
-                                     description: str,
-                                     user_id: str) -> Union[List[dict], None]:
+def spotify_create_playlist(client: spotipy.client.Spotify,
+                            name: str,
+                            description: str,
+                            user_id: str) -> List[dict]:
     """
-    Create a playlist and fill it with tracks. If a playlist of the same name
-    exists, this function does nothing. Returns information about playlist
-    that was created or None.
+    Create a playlist. If a playlist of the same name exists, this function
+    does nothing. Returns information about playlist that was created or None.
     """
-    logger.info(f'Creating and filling playlist {name}.')
+    logger.info(f'Creating playlist {name}.')
 
     # get all playlist names
+    api_operation_name = 'user_playlists'
     playlists: List[dict] = spotify_get_results(client,
-                                                'user_playlists',
+                                                api_operation_name,
                                                 user=user_id)
-    playlist_names = [pl['name'] for pl in playlists]
 
-    if name in playlist_names:
-        logger.info('Playlist already exists. Doing nothing.')
-        return None
-    else:
-        create_response = client.user_playlist_create(
-            user=user_id,
-            name=name,
-            public=False,
-            collaborative=False,
-            description=description
-        )
-        playlist_id: str = create_response['id']
-        client.playlist_add_items(playlist_id=playlist_id,
-                                  items=track_uris,
-                                  position=None)
+    # Check if playlist name exists
+    for pl in playlists:
+        pl_name: str = pl['name']
+        pl_id: str = pl['id']
+        pl_uri: str = pl['uri']
 
-        details = {}
-        details['id'] = create_response['id']
-        details['uri'] = create_response['uri']
+        if name == pl_name:
+            logger.info('Playlist already exists. Doing nothing.')
+            details = {}
+            details['id'] = pl_id
+            details['uri'] = pl_uri
 
-        logger.info('Created and filled playlist.')
+            return details
 
-        return details
+    create_response = client.user_playlist_create(
+        user=user_id,
+        name=name,
+        public=False,
+        collaborative=False,
+        description=description
+    )
+    details = {}
+    details['id'] = create_response['id']
+    details['uri'] = create_response['uri']
+
+    logger.info('Created and filled playlist.')
+
+    return details
+
+
+def spotify_fill_playlist(client: spotipy.client.Spotify,
+                          playlist_id: str,
+                          track_uris: List[dict],
+                          user_id: str,
+                          overwrite: bool = False) -> None:
+    """
+    Fill a playlist with tracks. If overwrite is True, all tracks on
+    playlist are truncated and the playlist is filled with new tracks.
+    """
+    logger.info(f'Filling playlist {playlist_id}.')
+
+    breakpoint()
+    # Is the playlist already populated?
+    tracks: List[dict] = spotify_get_results(client,
+                                             operation='user_playlist_tracks',
+                                             limit=100,
+                                             playlist_id=playlist_id,
+                                             fields=None)
+    num_tracks = len(tracks)
+    if num_tracks > 0:
+        # Is overwrite set to True?
+        if overwrite is True:
+            # Truncate the playlist
+            track_ids: List[str] = [track['track']['id'] for track in tracks]
+            client.user_playlist_remove_all_occurrences_of_tracks(
+                user=user_id,
+                playlist_id=playlist_id,
+                tracks=track_ids,
+                snapshot_id=None
+            )
+        else:
+            logger.info(f'Playlist {playlist_id} already has tracks and '
+                        f'overwrite is set to {overwrite}. Doing nothing.')
+            return None
+
+    # Fill the playlist
+    client.playlist_add_items(playlist_id=playlist_id,
+                              items=track_uris,
+                              position=None)
+    logger.info('Filled playlist.')
+
+    return None
 
 
 def spotify_get_results(client: spotipy.client.Spotify,
