@@ -92,7 +92,6 @@ def spotify_fill_playlist(client: spotipy.client.Spotify,
     """
     logger.info(f'Filling playlist {playlist_id}.')
 
-    breakpoint()
     # Is the playlist already populated?
     tracks: List[dict] = spotify_get_results(client,
                                              operation='user_playlist_tracks',
