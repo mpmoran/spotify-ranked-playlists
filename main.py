@@ -1,4 +1,5 @@
 # standard libraries
+import configparser
 import logging
 import os
 from pathlib import Path
@@ -9,6 +10,7 @@ from dotenv import load_dotenv
 import pandas as pd
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+import yaml
 
 # local libraries
 import spotify_helpers as sh
@@ -27,22 +29,39 @@ logging.basicConfig(
     level=logging.INFO,
     style='{'
 )
+logger = logging
+
+# load configurations
+# ----------------------------------------------------------------------------
+logger.info('Loading configurations.')
+
+# load application configuration
+config = configparser.ConfigParser()
+config.read('app.conf')
+playlists_conf_path: str = config['DEFAULT']['playlist_conf_path']
+spotify_permissions_scope: str = config['DEFAULT']['spotify_permissions_scope']
 
 # load env vars from .env file
 load_dotenv()
 
+# load playlists configuration
+playlist_config_text: str = Path(playlists_conf_path).read_text()
+playlist_config = yaml.safe_load(playlist_config_text)
+# ----------------------------------------------------------------------------
+
+
 # get authentication details for Spotify
 # ----------------------------------------------------------------------------
-logging.info('Pulling secrets.')
+logger.info('Pulling secrets.')
 sp_client_id: str = os.getenv('SPOTIFY_CLIENT_ID')
 sp_client_secret: str = os.getenv('SPOTIFY_CLIENT_SECRET')
 sp_redirect_uri: str = os.getenv('SPOTIFY_REDIRECT_URI')
-sp_scope = 'user-library-read playlist-modify-private playlist-read-private'
+sp_scope: str = spotify_permissions_scope
 # ----------------------------------------------------------------------------
 
 # create spotify client
 # ----------------------------------------------------------------------------
-logging.info('Authenticating with Spotify API.')
+logger.info('Authenticating with Spotify API.')
 sp = spotipy.Spotify(
     auth_manager=SpotifyOAuth(client_id=sp_client_id,
                               client_secret=sp_client_secret,
@@ -53,25 +72,25 @@ sp = spotipy.Spotify(
 
 # get details about current user
 # ----------------------------------------------------------------------------
-logging.info('Getting information of user.')
+logger.info('Getting information of user.')
 user_details: dict = sp.current_user()
 user_id: str = user_details['id']
 user_uri: str = user_details['uri']
-logging.info(f'Proceeding with user {user_id}.')
+logger.info(f'Proceeding with user {user_id}.')
 
 # get all saved tracks by user
 # ----------------------------------------------------------------------------
-logging.info('Getting saved tracks of user.')
+logger.info('Getting saved tracks of user.')
 saved_tracks: List[dict] = sh.spotify_get_results(sp,
                                                   'current_user_saved_tracks')
 num_saved_tracks: int = len(saved_tracks)
-logging.info(f'Number of saved tracks is {num_saved_tracks}.')
+logger.info(f'Number of saved tracks is {num_saved_tracks}.')
 # ----------------------------------------------------------------------------
 
 # get audio features of all tracks
 # ----------------------------------------------------------------------------
 # audio_features is in the same order as saved_tracks
-logging.info('Getting audio features of saved tracks.')
+logger.info('Getting audio features of saved tracks.')
 audio_features: List[dict] = []
 for piece in sh.chunk(saved_tracks, 100):  # piece is List[dict]
     track_uris: List[str] = [track['track']['uri'] for track in piece]
@@ -82,13 +101,13 @@ if num_saved_tracks != num_audio_features:
     raise Exception(f'Total tracks according to Spotify ({num_saved_tracks}) '
                     f'does not equal total tracks extracted from API calls '
                     f'({num_audio_features}).')
-logging.info('Number of tracks for which audio features were obtained '
-             f'is {num_audio_features}.')
+logger.info('Number of tracks for which audio features were obtained '
+            f'is {num_audio_features}.')
 # ----------------------------------------------------------------------------
 
 # merge information about songs
 # ----------------------------------------------------------------------------
-logging.info('Merging info on saved tracks and their audio features.')
+logger.info('Merging info on saved tracks and their audio features.')
 saved_tracks_stage1: List[dict] = []
 for track in saved_tracks:
     info = track['track']
@@ -123,12 +142,12 @@ for str, afr in zip(saved_tracks_stage1, audio_features_stage1):
     rec.update(afr)
     tracks_stage1.append(rec)
 num_tracks_stage1 = len(tracks_stage1)
-logging.info(f'Number of tracks after merge is {num_tracks_stage1}.')
+logger.info(f'Number of tracks after merge is {num_tracks_stage1}.')
 # ----------------------------------------------------------------------------
 
 # create pandas dataframe
 # ----------------------------------------------------------------------------
-logging.info('Creating pandas dataframe.')
+logger.info('Creating pandas dataframe.')
 df_raw = pd.DataFrame(tracks_stage1)
 df_raw.to_csv('./saved_tracks.csv',
               sep='\t',
@@ -137,53 +156,22 @@ df_raw.to_csv('./saved_tracks.csv',
               mode='w',
               encoding='utf-8')
 df_raw_shape: tuple = df_raw.shape
-logging.info(f'Shape of raw dataframe is {df_raw_shape}.')
+logger.info(f'Shape of raw dataframe is {df_raw_shape}.')
 
 # dedup tracks with same artist and song name
-logging.info('Deduping tracks with same artist and song name.')
+logger.info('Deduping tracks with same artist and song name.')
 df_stage1_subset = ['artist', 'song_name']
 df_stage1 = df_raw.drop_duplicates(subset=df_stage1_subset,
                                    keep='first',
                                    ignore_index=True)
 df_stage1_shape: tuple = df_stage1.shape
-logging.info(f'Shape of dataframe after deduping {df_stage1_shape}.')
-# ----------------------------------------------------------------------------
-
-# config storage for creating playlists
-# ----------------------------------------------------------------------------
-playlist_config = [
-    {
-        'name': 'most danceable',
-        'metric': 'danceability',
-        'num_tracks': 50,
-        'description': '50 most danceable tracks from my liked songs.'
-    },
-    {
-        'name': 'highest tempo',
-        'metric': 'tempo',
-        'num_tracks': 50,
-        'description': '50 highest tempo songs from my liked songs.'
-    },
-    {
-        'name': 'highest energy',
-        'metric': 'energy',
-        'num_tracks': 50,
-        'description': '50 highest energy songs from my liked songs.'
-    },
-    {
-        'name': 'most live',
-        'metric': 'liveness',
-        'num_tracks': 50,
-        'description': '50 most live songs from my liked songs.'
-    }
-
-]
-num_config_playlists = len(playlist_config)
+logger.info(f'Shape of dataframe after deduping {df_stage1_shape}.')
 # ----------------------------------------------------------------------------
 
 # create playlists from config
 # ----------------------------------------------------------------------------
-logging.info(f'Creating {num_config_playlists} playlists from config.')
+num_config_playlists = len(playlist_config)
+logger.info(f'Creating {num_config_playlists} playlists from config.')
 for pl in playlist_config:
     name = pl['name']
     metric = pl['metric']
@@ -203,4 +191,4 @@ for pl in playlist_config:
         )
 # ----------------------------------------------------------------------------
 
-logging.info('Done.')
+logger.info('Done.')

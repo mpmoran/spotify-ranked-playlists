@@ -1,0 +1,17 @@
+---
+- name: most danceable
+  metric: danceability
+  num_tracks: 50
+  description: 50 most danceable tracks from my liked songs.
+- name: highest tempo
+  metric: tempo
+  num_tracks: 50
+  description: 50 highest tempo songs from my liked songs.
+- name: highest energy
+  metric: energy
+  num_tracks: 50
+  description: 50 highest energy songs from my liked songs.
+- name: most live
+  metric: liveness
+  num_tracks: 50
+  description: 50 most live songs from my liked songs.
