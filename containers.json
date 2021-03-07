@@ -1,0 +1,8 @@
+{
+    "flask": {
+        "image": ":ranked-spotify-playlists.flask-container.1",
+        "ports": {
+            "5000": "HTTP"
+        }
+    }
+}
