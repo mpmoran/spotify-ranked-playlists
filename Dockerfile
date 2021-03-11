@@ -9,12 +9,20 @@ WORKDIR /app
 
 # Copy the dependencies file to the working directory
 COPY requirements.txt .
+COPY requirements/prod.txt requirements/prod.txt
 
 # Install any dependencies
 RUN pip install -r requirements.txt
 
 # Copy the content of the local src directory to the working directory
-COPY app.py .
+# COPY app.py .
+# COPY spotify_ranked_playlists.py .
+# COPY spotify.py .
+# COPY spotify_helpers.py .
+# COPY static ./static
+# COPY templates ./templates
+COPY . .
 
 # Specify the command to run on container start
 CMD [ "python", "./app.py" ]
+# CMD ["/bin/bash"]
