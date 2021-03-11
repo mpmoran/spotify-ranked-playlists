@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+
+  <meta name="author" content="Michael P. Moran">
+  <meta name="description" content="a web site with useless information about Texas state legislators">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  {# <link href="//fonts.googleapis.com/css2?family=Open+Sans:400,300,600"
+           rel="stylesheet" type="text/css"> #}
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+
+  <meta property="og:description"
+        content="a web site with useless information about Texas state legislators">
+  <meta property="og:title" content="spotify_ranked_playlists">
+
+  <title>{% block title %}{% endblock %} - spotify ranked playlists</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='normalize.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skeleton.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='spotify_ranked_playlists.css') }}">
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <div class="row">
+        <div class="eight columns" style="margin-top: 10%">
+          <h1>spotify_ranked_playlists</h1>
+        </div>
+        <div class="four columns" style="margin-top: 10%">
+          <ul>
+            <li><a href="{{ url_for('views.home') }}">home</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <section class="content">
+      <div class="row">
+        <div class="twelve columns">
+          <header>
+            {% block header %}{% endblock %}
+          </header>
+        </div>
+      </div>
+      {% block content %}{% endblock %}
+    </section>
+  </div>
+</body>
+</html>

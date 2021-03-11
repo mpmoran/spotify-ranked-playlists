@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h2>{% block title %}create playlists{% endblock %}</h2>
+{% endblock %}
+
+{% block content %}
+  <form action="/create_playlists" method="post">
+    <div class="row">
+      <div class="four columns">
+        <label for="username">Spotify username:</label>
+        <input class="u-full-width" type="text" id="username" name="username"
+         value="{{ request.form['username'] }}" required>
+      </div>
+    </div>
+    <button class="button-primary" type="submit">submit</button>
+  </form>
+{% endblock %}
