@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # standard libraries
 import logging
 from typing import List
